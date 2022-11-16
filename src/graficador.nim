@@ -65,8 +65,18 @@ proc generar_tabla_frecuencias(datos: seq[DatoDiario]): TablaFrecuenciaVientos =
     return result
 
 # genera un csv
-proc escribir(tabla: TablaFrecuenciaVientos, max: float, min: float): string = 
-    result = result & "vel / dir, "
+proc escribir(tabla: TablaFrecuenciaVientos, datos: seq[DatoDiario], max: float, min: float): string = 
+    
+    var maxrumbo: array[16, float]
+    for i in 0..15:
+        maxrumbo[i] = 0.0
+    
+    for dato in datos:
+        let rumbo = indice_rumbo(dato.dir_rachamax)
+        if dato.racha > maxrumbo[rumbo]:
+            maxrumbo[rumbo] = dato.racha
+
+    result = result & "vel / dir,"
     for i in 0..14:
         result = result & nombres[i]
         result = result & ", "
@@ -88,13 +98,20 @@ proc escribir(tabla: TablaFrecuenciaVientos, max: float, min: float): string =
     for i in 0..4:
         let lbound = (min + i.toFloat * (max - min) / 10).formatFloat(ffDecimal, 1)
         let ubound = (min + (i + 1).toFloat * (max - min) / 10).formatFloat(ffDecimal, 1)
-        result = result & lbound & " - " & ubound & " m/s, "
+        result = result & lbound & " - " & ubound & " m/s,"
         for rumbo in 0..14:
             let freq = tabla[rumbo][i]
             let valor = (freq / total * 100.0).formatFloat(ffDecimal, 3)
             result = result & valor & ", "
         
         result = result & (tabla[15][i] / total * 100.0).formatFloat(ffDecimal, 3) & "\n"
+
+    # Fila final, velocidad maxima en cada direccion
+    result = result & "vmax (m/s)," 
+    for rumbo in 0..14:
+        result = result & maxrumbo[rumbo].formatFloat(ffDecimal, 3) & ","
+    result = result & maxrumbo[15].formatFloat(ffDecimal, 3)
+
 
 proc dibujar_rosa_base(image: Image): float =
     let ctx_out = newContext(image)
@@ -283,7 +300,7 @@ proc rosa_vientos*(filename: string, datos: seq[DatoDiario]) =
     let tabla = generar_tabla_frecuencias(datos)
     let (maxvel, minvel) = max_min_vel(datos)
 
-    let csv = tabla.escribir(maxvel, minvel)
+    let csv = tabla.escribir(datos, maxvel, minvel)
     writeFile(filename & "_tabla.csv", csv)
 
     image_freq.dibujar_rosa_freq(maxvel, minvel, tabla)
