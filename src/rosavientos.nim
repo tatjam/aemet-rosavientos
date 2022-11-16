@@ -2,6 +2,7 @@ import os
 import times
 import request
 import graficador
+import temperaturas
 
 when isMainModule:
     var estacion = ""
@@ -36,3 +37,5 @@ when isMainModule:
     echo "Generando graficos en " & filename
 
     rosa_vientos(filename, datos)
+
+    T_referencia(datos)
